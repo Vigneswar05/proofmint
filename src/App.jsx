@@ -428,33 +428,46 @@ const GenerateCert = () => {
     const generatePDF = async (docxBlob) => {
         if (!pdfRenderRef.current) return null;
         
-        // Render Docx to HTML
-        await renderAsync(docxBlob, pdfRenderRef.current, null, {
-            className: "docx",
-            inWrapper: false,
-            ignoreLastRenderedPageBreak: true
-        });
+        try {
+            // Clear previous render
+            pdfRenderRef.current.innerHTML = '';
+            
+            // Render Docx to HTML
+            await renderAsync(docxBlob, pdfRenderRef.current, null, {
+                className: "docx",
+                inWrapper: false,
+                ignoreLastRenderedPageBreak: true
+            });
 
-        const canvas = await html2canvas(pdfRenderRef.current, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff"
-        });
+            // Small delay to ensure styles are applied
+            await new Promise(r => setTimeout(r, 200));
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4'
-        });
+            const canvas = await html2canvas(pdfRenderRef.current, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff",
+                width: pdfRenderRef.current.scrollWidth,
+                height: pdfRenderRef.current.scrollHeight
+            });
 
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        return pdf.output('blob');
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            return pdf.output('blob');
+        } catch (err) {
+            console.error("PDF Generation Error:", err);
+            return null;
+        }
     };
 
     const handleBatchGenerate = async () => {
@@ -509,8 +522,16 @@ const GenerateCert = () => {
                 const outBuffer = doc.getZip().generate({ type: 'arraybuffer', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
                 const docxBlob = new Blob([outBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
                 
-                exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}_Certificate.docx`, outBuffer);
+                // Add Word to zip
+                exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.docx`, outBuffer);
                 
+                // ADD PDF TO ZIP!
+                const pdfBlob = await generatePDF(docxBlob);
+                if (pdfBlob) {
+                    const pdfBuffer = await pdfBlob.arrayBuffer();
+                    exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.pdf`, pdfBuffer);
+                }
+
                 const fileHash = await generateBlobHash(docxBlob);
                 // We use dataHash on blockchain for 100% automatic QR verification
                 await storeHashOnBlockchain(dataHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
@@ -520,7 +541,7 @@ const GenerateCert = () => {
             const finalZipBlob = new Blob([finalZipBuffer], { type: 'application/zip' });
             saveAs(finalZipBlob, 'ProofMint_Bulk_Certificates.zip');
             
-            alert(`Success! ${rows.length} certificates securely minted into the blockchain.`);
+            alert(`Success! ${rows.length} certificates securely minted into the blockchain. ZIP contains both Word and PDF versions.`);
             setCsvFile(null);
         } catch (err) {
             console.error(err);
