@@ -1,7 +1,7 @@
 import hre from "hardhat";
 
 async function main() {
-  const contractAddress = "0x26F8dF71807cA65352bfC1BEae1863cBFb8f5C9e";
+  const contractAddress = "0x96E872d905D55A885FAbd0B24e3397e264Daed37";
   const certChain = await hre.ethers.getContractAt("CertChain", contractAddress);
 
   console.log("Setting up Institution data...");

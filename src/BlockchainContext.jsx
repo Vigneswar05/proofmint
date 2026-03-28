@@ -5,7 +5,7 @@ import sha256 from 'sha256';
 // Import ABI from the hardhat artifacts folder
 import CertChainArtifact from '../artifacts/contracts/CertChain.sol/CertChain.json';
 
-const CONTRACT_ADDRESS = "0x26F8dF71807cA65352bfC1BEae1863cBFb8f5C9e";
+const CONTRACT_ADDRESS = "0x96E872d905D55A885FAbd0B24e3397e264Daed37";
 
 const BlockchainContext = createContext();
 export const useBlockchain = () => useContext(BlockchainContext);
@@ -113,7 +113,7 @@ export const BlockchainProvider = ({ children }) => {
             const bytes32Hash = "0x" + hash;
             
             // This triggers the MetaMask Popup!
-            const tx = await contractWithSigner.issueCertificate(bytes32Hash, metadata.institutionName);
+            const tx = await contractWithSigner.issueCertificate(metadata.credentialId, bytes32Hash, metadata.institutionName);
             
             // Transaction submitted, now we wait for it to be mined
             const receipt = await tx.wait();
@@ -176,11 +176,28 @@ export const BlockchainProvider = ({ children }) => {
     };
 
     const verifyCredentialIdOnBlockchain = async (credentialId) => {
-        // Advanced decentralized indexing isn't set up, we rely on local cache for UI, but the real test is file upload (binary hash)
-        for (const [hash, data] of Object.entries(blockchainHashes)) {
-            if (data.credentialId === credentialId) return { hash, data };
+        if (!contract) return null;
+        try {
+            // Decentralized on-chain lookup for the QR Code!
+            const hash = await contract.getHashByCredential(credentialId);
+            
+            if (!hash || hash === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+                return null;
+            }
+            
+            const rawHashStr = hash.substring(2);
+            
+            // Once we have the hash, we query verifyCertificate 
+            const certData = await verifyHashOnBlockchain(rawHashStr);
+            if (certData) {
+                // Return data with raw hash string format so UI renders it nicely
+                return { hash: rawHashStr, data: certData };
+            }
+            return null;
+        } catch (error) {
+            console.error("verifyCredential error:", error);
+            return null;
         }
-        return null; // A robust full dApp uses The Graph or Indexers for scanning QRs without files
     };
 
     const generateBlobHash = async (blob) => {

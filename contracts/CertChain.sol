@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title CertChain
- * @dev Secure certificate hashing and verification on blockchain
- */
 contract CertChain {
     struct Certificate {
         bytes32 contentHash;
@@ -21,16 +17,16 @@ contract CertChain {
 
     struct Institution {
         string name;
-        bytes32 passwordHash; // Stored securely on chain
+        bytes32 passwordHash;
         bool isRegistered;
         uint256 registeredAt;
-        uint256 credits; // Prepaid wallet balance
+        uint256 credits;
     }
 
-    // Map institution name to its on-chain record
     mapping(string => Institution) public registeredInstitutions;
+    mapping(string => bytes32) public credentialToHash;
 
-    event CertificateIssued(bytes32 indexed hash, string institution, uint256 timestamp);
+    event CertificateIssued(bytes32 indexed hash, string credentialId, string institution, uint256 timestamp);
     event CertificateRevoked(bytes32 indexed hash, uint256 timestamp);
     event InstitutionAuthorized(address indexed institution);
     event InstitutionRevoked(address indexed institution);
@@ -60,9 +56,6 @@ contract CertChain {
         emit InstitutionRevoked(_institution);
     }
 
-    /**
-     * @dev Register an institution's login credentials on the blockchain
-     */
     function registerInstitutionData(string memory _name, bytes32 _passwordHash) public onlyOwner {
         require(!registeredInstitutions[_name].isRegistered, "Institution already registered");
 
@@ -71,42 +64,31 @@ contract CertChain {
             passwordHash: _passwordHash,
             isRegistered: true,
             registeredAt: block.timestamp,
-            credits: 0 // Starts empty, requires fiat top-up
+            credits: 0 
         });
 
         emit InstitutionRegistered(_name, block.timestamp);
     }
 
-    /**
-     * @dev Removes an institution's access completely
-     */
     function removeInstitution(string memory _name) public onlyOwner {
         require(registeredInstitutions[_name].isRegistered, "Institution not found");
         registeredInstitutions[_name].isRegistered = false;
-        // Optionally revoke wallet authorization
     }
 
-    /**
-     * @dev Add prepaid credits after Fiat payment confirmation
-     */
     function addCredits(string memory _name, uint256 _amount) public onlyOwner {
         require(registeredInstitutions[_name].isRegistered, "Institution not found");
         registeredInstitutions[_name].credits += _amount;
     }
 
-    /**
-     * @dev Verify if a given password hash matches the on-chain record
-     */
     function verifyInstitutionLogin(string memory _name, bytes32 _passwordHash) public view returns (bool) {
         Institution memory inst = registeredInstitutions[_name];
         return inst.isRegistered && inst.passwordHash == _passwordHash;
     }
 
-    function issueCertificate(bytes32 _hash, string memory _institution) public onlyAuthorized {
+    function issueCertificate(string memory _credentialId, bytes32 _hash, string memory _institution) public onlyAuthorized {
         require(!certificates[_hash].exists, "Certificate already registered");
         require(registeredInstitutions[_institution].credits >= 1, "Insufficient credits. Please recharge.");
         
-        // Deduct 1 credit for this transaction
         registeredInstitutions[_institution].credits -= 1;
         
         certificates[_hash] = Certificate({
@@ -118,12 +100,11 @@ contract CertChain {
             isRevoked: false
         });
 
-        emit CertificateIssued(_hash, _institution, block.timestamp);
+        credentialToHash[_credentialId] = _hash;
+
+        emit CertificateIssued(_hash, _credentialId, _institution, block.timestamp);
     }
 
-    /**
-     * @dev Revoke a previously issued certificate (flag as invalid)
-     */
     function revokeCertificate(bytes32 _hash) public onlyAuthorized {
         require(certificates[_hash].exists, "Certificate not found");
         require(!certificates[_hash].isRevoked, "Already revoked");
@@ -132,9 +113,6 @@ contract CertChain {
         emit CertificateRevoked(_hash, block.timestamp);
     }
 
-    /**
-     * @dev Verify if a hash exists on the blockchain and is valid
-     */
     function verifyCertificate(bytes32 _hash) public view returns (
         bool exists, 
         bool isRevoked,
@@ -144,5 +122,9 @@ contract CertChain {
     ) {
         Certificate memory cert = certificates[_hash];
         return (cert.exists, cert.isRevoked, cert.institution, cert.timestamp, cert.blockNumber);
+    }
+
+    function getHashByCredential(string memory _credentialId) public view returns (bytes32) {
+        return credentialToHash[_credentialId];
     }
 }

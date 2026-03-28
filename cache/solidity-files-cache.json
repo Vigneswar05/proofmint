@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/vigneswar/proofmint/contracts/CertChain.sol": {
-      "lastModificationDate": 1774272371229,
-      "contentHash": "a0d0e737351c11c50304f53049d50a3c",
+      "lastModificationDate": 1774686381874,
+      "contentHash": "f2ea0dad50b059ec55e3506da8ace578",
       "sourceName": "contracts/CertChain.sol",
       "solcConfig": {
         "version": "0.8.24",
