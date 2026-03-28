@@ -1,0 +1,31 @@
+{
+  "name": "cert-chain",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "docx": "^9.6.1",
+    "docxtemplater": "^3.68.3",
+    "docxtemplater-image-module-free": "^1.1.1",
+    "ethers": "^6.10.0",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^11.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "lucide-react": "^0.344.0",
+    "pizzip": "^3.2.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sha256": "^0.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
+  }
+}
