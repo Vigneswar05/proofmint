@@ -200,23 +200,29 @@ export const BlockchainProvider = ({ children }) => {
         }
     };
 
+    // --- ROBUST CRYPTOGRAPHIC HASHING ENGINE (ethers.js v6) ---
+    // ethers.sha256 handles Uint8Array natively and is perfectly consistent
+    
     const generateBlobHash = async (blob) => {
-        const arrayBuffer = await blob.arrayBuffer();
-        // Use Web Crypto API if available (HTTPS)
-        if (window.crypto && window.crypto.subtle) {
-            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        } else {
-            // Fallback for HTTP / Mobile network testing securely using the sha256 module
+        try {
+            const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
-            return sha256(Array.from(uint8Array));
+            // ethers.sha256 returns a '0x' prefixed hex string
+            const fullHash = ethers.sha256(uint8Array);
+            // We return the raw hex without '0x' to keep current app logic consistent
+            return fullHash.substring(2);
+        } catch (err) {
+            console.error("Hashing Error:", err);
+            return null;
         }
     };
 
     const generateStringHash = async (str) => {
-        // Safe cross-platform synchronous hash (HTTPS and HTTP mobile tests)
-        return sha256(str);
+        // ethers.id calculates the keccak256 hash of a UTF-8 string, but we want sha256
+        // for cross-compatibility with our existing record system.
+        const utf8Bytes = ethers.toUtf8Bytes(str);
+        const fullHash = ethers.sha256(utf8Bytes);
+        return fullHash.substring(2);
     };
 
     const generateFileHash = generateBlobHash;
