@@ -26,7 +26,7 @@ import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
 import ImageModule from 'docxtemplater-image-module-free';
 import { renderAsync } from 'docx-preview';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { BlockchainProvider, useBlockchain } from './BlockchainContext';
 import { defaultTemplate } from './defaultTemplate.js';
@@ -426,29 +426,33 @@ const GenerateCert = () => {
     const pdfRenderRef = useRef(null);
 
     const generatePDF = async (docxBlob) => {
-        if (!pdfRenderRef.current) return null;
+        if (!pdfRenderRef.current) {
+            console.error("PDF Render Container not found!");
+            return null;
+        }
         
         try {
+            console.log("Starting PDF generation sequence...");
             // Clear previous render
             pdfRenderRef.current.innerHTML = '';
             
-            // Render Docx to HTML
+            // Render Docx to HTML - docx-preview is async
             await renderAsync(docxBlob, pdfRenderRef.current, null, {
                 className: "docx",
                 inWrapper: false,
                 ignoreLastRenderedPageBreak: true
             });
 
-            // Small delay to ensure styles are applied
-            await new Promise(r => setTimeout(r, 200));
+            // Increased delay to ensure complexity is rendered (font, images, qr)
+            await new Promise(r => setTimeout(r, 800));
 
             const canvas = await html2canvas(pdfRenderRef.current, {
-                scale: 2,
+                scale: 2, // High resolution
                 useCORS: true,
                 logging: false,
                 backgroundColor: "#ffffff",
-                width: pdfRenderRef.current.scrollWidth,
-                height: pdfRenderRef.current.scrollHeight
+                windowWidth: 794, // Standard A4 pixel width at 96dpi
+                windowHeight: 1123
             });
 
             const imgData = canvas.toDataURL('image/png');
@@ -458,14 +462,14 @@ const GenerateCert = () => {
                 format: 'a4'
             });
 
-            const imgProps = pdf.getImageProperties(imgData);
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            console.log("PDF packaged successfully.");
             return pdf.output('blob');
         } catch (err) {
-            console.error("PDF Generation Error:", err);
+            console.error("CRITICAL: PDF Generation Failed:", err);
             return null;
         }
     };
@@ -749,9 +753,9 @@ const GenerateCert = () => {
                 )}
             </AnimatePresence>
             
-            {/* Hidden container for PDF rendering */}
-            <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '210mm', background: 'white' }}>
-                <div ref={pdfRenderRef}></div>
+            {/* Hidden container for PDF rendering - improved for capture */}
+            <div style={{ position: 'absolute', left: 0, top: 0, width: '794px', background: 'white', opacity: 0, pointerEvents: 'none', zIndex: -1000, overflow: 'hidden' }}>
+                <div ref={pdfRenderRef} style={{ background: 'white', width: '100%' }}></div>
             </div>
         </div>
     );
