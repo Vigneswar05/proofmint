@@ -730,12 +730,16 @@ const GenerateCert = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {success.pdfUrl && (
-                                    <a href={success.pdfUrl} download={`${success.studentName}_cert.pdf`} className="btn-primary" style={{ flex: 1, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)' }}>
+                                {success.pdfUrl ? (
+                                    <a href={success.pdfUrl} download={`${success.studentName || 'certificate'}.pdf`} className="btn-primary" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', borderRadius: '12px', color: 'white' }}>
                                         <FileText size={20} /> Download PDF
                                     </a>
+                                ) : (
+                                    <div className="glass-card" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.6 }}>
+                                        <Loader2 className="animate-spin" size={20} /> Generating PDF...
+                                    </div>
                                 )}
-                                <a href={success.docxUrl} download={`${success.studentName}_cert.docx`} className="glass-card" style={{ flex: 1, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'white' }}>
+                                <a href={success.docxUrl} download={`${success.studentName || 'certificate'}.docx`} className="glass-card" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'white' }}>
                                     <Download size={20} /> Word (.docx)
                                 </a>
                                 <button onClick={() => setSuccess(null)} className="glass-card" style={{ padding: '0 2rem', color: 'white' }}>Close</button>
@@ -746,7 +750,7 @@ const GenerateCert = () => {
             </AnimatePresence>
             
             {/* Hidden container for PDF rendering */}
-            <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '210mm' }}>
+            <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '210mm', background: 'white' }}>
                 <div ref={pdfRenderRef}></div>
             </div>
         </div>
