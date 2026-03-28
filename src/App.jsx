@@ -661,11 +661,11 @@ const GenerateCert = () => {
                             <div style={{ background: 'rgba(0,0,0,0.4)', padding: '2rem', borderRadius: '20px', marginBottom: '2.5rem', textAlign: 'left', border: '1px solid var(--border)' }}>
                                 <div style={{ marginBottom: '1.5rem' }}>
                                     <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>IMMUTABLE FILE HASH (SHA-256)</p>
-                                    <p style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#fff' }}>{success.hash}</p>
+                                    <p style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#fff', wordBreak: 'break-all' }}>{success.hash}</p>
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>LEDGER TRANSACTION ID</p>
-                                    <p style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--secondary)' }}>{success.tx.txHash}</p>
+                                    <p style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--secondary)', wordBreak: 'break-all' }}>{success.tx.txHash}</p>
                                 </div>
                             </div>
 
