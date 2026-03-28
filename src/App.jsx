@@ -25,6 +25,9 @@ import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
 import ImageModule from 'docxtemplater-image-module-free';
+import { renderAsync } from 'docx-preview';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { BlockchainProvider, useBlockchain } from './BlockchainContext';
 import { defaultTemplate } from './defaultTemplate.js';
 
@@ -63,6 +66,10 @@ const Navbar = () => {
                 <h2 className="gradient-text" style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px' }}>ProofMint</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div style={{ display: 'none', md: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(74, 222, 128, 0.1)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.2)' }} className="ssl-badge">
+                    <ShieldCheck size={14} color="#4ade80" />
+                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#4ade80', letterSpacing: '0.5px' }}>SSL SECURE (HTTPS)</span>
+                </div>
                 {currentUser ? (
                     <>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -416,6 +423,39 @@ const GenerateCert = () => {
     const [success, setSuccess] = useState(null);
     const fallbackTemplate = currentUser?.name?.toLowerCase().includes('abc') ? defaultTemplate : null;
     const templateDataUrl = localStorage.getItem('cert_template_docx') || fallbackTemplate;
+    const pdfRenderRef = useRef(null);
+
+    const generatePDF = async (docxBlob) => {
+        if (!pdfRenderRef.current) return null;
+        
+        // Render Docx to HTML
+        await renderAsync(docxBlob, pdfRenderRef.current, null, {
+            className: "docx",
+            inWrapper: false,
+            ignoreLastRenderedPageBreak: true
+        });
+
+        const canvas = await html2canvas(pdfRenderRef.current, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff"
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        return pdf.output('blob');
+    };
 
     const handleBatchGenerate = async () => {
         if (!templateDataUrl) return alert('Please upload a .docx template first.');
@@ -552,7 +592,12 @@ const GenerateCert = () => {
             });
 
             const docxUrl = URL.createObjectURL(docxBlob);
-            setSuccess({ tx, docxUrl, hash: dataHash });
+            
+            // Build PDF as well!
+            const pdfBlob = await generatePDF(docxBlob);
+            const pdfUrl = pdfBlob ? URL.createObjectURL(pdfBlob) : null;
+
+            setSuccess({ tx, docxUrl, pdfUrl, hash: dataHash, studentName: n });
             setForm({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {
             console.error(err);
@@ -663,9 +708,14 @@ const GenerateCert = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <a href={success.docxUrl} download={`${success.tx.studentName}_cert.docx`} className="btn-primary" style={{ flex: 1, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                    <Download size={20} /> Download .docx
+                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                {success.pdfUrl && (
+                                    <a href={success.pdfUrl} download={`${success.studentName}_cert.pdf`} className="btn-primary" style={{ flex: 1, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)' }}>
+                                        <FileText size={20} /> Download PDF
+                                    </a>
+                                )}
+                                <a href={success.docxUrl} download={`${success.studentName}_cert.docx`} className="glass-card" style={{ flex: 1, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'white' }}>
+                                    <Download size={20} /> Word (.docx)
                                 </a>
                                 <button onClick={() => setSuccess(null)} className="glass-card" style={{ padding: '0 2rem', color: 'white' }}>Close</button>
                             </div>
@@ -673,6 +723,11 @@ const GenerateCert = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            
+            {/* Hidden container for PDF rendering */}
+            <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '210mm' }}>
+                <div ref={pdfRenderRef}></div>
+            </div>
         </div>
     );
 };
