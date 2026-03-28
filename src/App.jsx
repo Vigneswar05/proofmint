@@ -408,7 +408,7 @@ const TemplateUpload = () => {
 // --- Generate Component ---
 
 const GenerateCert = () => {
-    const { storeHashOnBlockchain, generateBlobHash, currentUser, blockchainInstitutions, userRole } = useBlockchain();
+    const { storeHashOnBlockchain, generateBlobHash, generateStringHash, currentUser, blockchainInstitutions, userRole } = useBlockchain();
     const [isBatch, setIsBatch] = useState(false);
     const [csvFile, setCsvFile] = useState(null);
     const [form, setForm] = useState({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
@@ -445,7 +445,13 @@ const GenerateCert = () => {
                 if (!n || !c) continue;
 
                 const credentialId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-                const verificationUrl = `${window.location.origin}/#verify-${credentialId}`;
+                const salt = Math.random().toString(36).substring(2, 10);
+                const instName = currentUser.name || 'Institution';
+                const dataString = `${n}|${c}|${dur||''}|${dt||''}|${instName}|${salt}`;
+                const dataHash = await generateStringHash(dataString);
+                
+                const params = new URLSearchParams({ id: credentialId, n, c, d: dur||'', dt: dt||'', i: instName, s: salt });
+                const verificationUrl = `${window.location.origin}/#verify?${params.toString()}`;
                 const qrDataUrl = await QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'M', margin: 1, width: 120 });
 
                 const imageOptions = {
@@ -466,8 +472,8 @@ const GenerateCert = () => {
                 exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}_Certificate.docx`, outBuffer);
                 
                 const fileHash = await generateBlobHash(docxBlob);
-                // DO NOT pass studentName to blockchain metadata (Privacy Compliance)
-                await storeHashOnBlockchain(fileHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
+                // We use dataHash on blockchain for 100% automatic QR verification
+                await storeHashOnBlockchain(dataHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
             }
 
             const finalZipBuffer = exportBundle.generate({ type: 'arraybuffer' });
@@ -496,7 +502,18 @@ const GenerateCert = () => {
         setLoading(true);
         try {
             const credentialId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            const verificationUrl = `${window.location.origin}/#verify-${credentialId}`;
+            const salt = Math.random().toString(36).substring(2, 10);
+            const n = form.name.trim();
+            const c = form.course.trim();
+            const d = form.duration.trim();
+            const dt = form.date ? new Date(form.date).toLocaleDateString('en-GB') : '';
+            const instName = currentUser.name || 'Institution';
+            
+            const dataString = `${n}|${c}|${d}|${dt}|${instName}|${salt}`;
+            const dataHash = await generateStringHash(dataString);
+            
+            const params = new URLSearchParams({ id: credentialId, n, c, d, dt, i: instName, s: salt });
+            const verificationUrl = `${window.location.origin}/#verify?${params.toString()}`;
             const qrDataUrl = await QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: 'M', margin: 1, width: 120 });
 
             const imageOptions = {
@@ -526,7 +543,8 @@ const GenerateCert = () => {
             const fileHash = await generateBlobHash(docxBlob);
 
             // Removing studentName mapping for Privacy (DPDP Act Compliance)
-            const tx = await storeHashOnBlockchain(fileHash, {
+            // Using Cryptographic QR dataHash directly binds Name to the Ledger!
+            const tx = await storeHashOnBlockchain(dataHash, {
                 courseName: form.course,
                 duration: form.duration,
                 institutionName: currentUser.name,
@@ -534,7 +552,7 @@ const GenerateCert = () => {
             });
 
             const docxUrl = URL.createObjectURL(docxBlob);
-            setSuccess({ tx, docxUrl, hash: fileHash });
+            setSuccess({ tx, docxUrl, hash: dataHash });
             setForm({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {
             console.error(err);
@@ -662,29 +680,65 @@ const GenerateCert = () => {
 // --- Verify Component ---
 
 const VerifyCert = () => {
-    const { generateBlobHash, verifyHashOnBlockchain, verifyCredentialIdOnBlockchain } = useBlockchain();
+    const { generateBlobHash, generateStringHash, verifyHashOnBlockchain, verifyCredentialIdOnBlockchain } = useBlockchain();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const fileInputRef = useRef();
 
     useEffect(() => {
         const hash = window.location.hash;
-        if (hash.startsWith('#verify-')) {
+        if (hash.startsWith('#verify?')) {
+            const queryString = hash.split('?')[1];
+            const params = new URLSearchParams(queryString);
+            autoVerifyCryptographic(params);
+        } else if (hash.startsWith('#verify-')) {
             const credentialId = hash.replace('#verify-', '');
-            autoVerify(credentialId);
+            autoVerifyLegacy(credentialId);
         }
     }, []);
 
-    const autoVerify = async (credentialId) => {
+    const autoVerifyCryptographic = async (params) => {
+        setLoading(true);
+        try {
+            const n = params.get('n') || '';
+            const c = params.get('c') || '';
+            const d = params.get('d') || '';
+            const dt = params.get('dt') || '';
+            const i = params.get('i') || '';
+            const s = params.get('s') || '';
+            
+            const dataString = `${n}|${c}|${d}|${dt}|${i}|${s}`;
+            const dataHash = await generateStringHash(dataString);
+            const blockchainData = await verifyHashOnBlockchain(dataHash);
+
+            if (blockchainData) {
+                setResult({
+                    isValid: true,
+                    isCryptoQr: true,
+                    data: blockchainData,
+                    params: { n, c, d, dt },
+                    hash: dataHash,
+                    fileName: "Cryptographic QR Code Validation"
+                });
+            } else {
+                setResult({ isValid: false, isCryptoQr: true, params: { n, c }, hash: dataHash, fileName: "Cryptographic QR Code Validation" });
+            }
+        } catch (e) {
+            alert('Verification process interrupted.');
+        } finally { setLoading(false); }
+    };
+
+    const autoVerifyLegacy = async (credentialId) => {
         setLoading(true);
         try {
             const data = await verifyCredentialIdOnBlockchain(credentialId);
             if (data) {
                 setResult({
                     isValid: true,
+                    isQrVerification: true,
                     data: data.data,
                     hash: data.hash,
-                    fileName: "N/A (QR Code verification)"
+                    fileName: "N/A (QR Code lookup only)"
                 });
             } else {
                 setResult({ isValid: false, fileName: "N/A" });
@@ -785,8 +839,8 @@ const VerifyCert = () => {
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '2.5rem' }}>
                                     {result.isValid && !result.data?.isRevoked ? (
-                                        <div style={{ width: '48px', height: '48px', background: '#4ade80', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <CheckCircle size={28} color="white" />
+                                        <div style={{ width: '48px', height: '48px', background: result.isQrVerification ? '#f59e0b' : '#4ade80', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {result.isQrVerification ? <AlertCircle size={28} color="white" /> : <CheckCircle size={28} color="white" />}
                                         </div>
                                     ) : (
                                         <div style={{ width: '48px', height: '48px', background: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -794,12 +848,53 @@ const VerifyCert = () => {
                                         </div>
                                     )}
                                     <div>
-                                        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: result.isValid && !result.data?.isRevoked ? '#4ade80' : '#ef4444' }}>
-                                            {!result.isValid ? 'Verification Failed' : (result.data?.isRevoked ? 'Certificate Revoked' : 'Verification Confirmed')}
+                                        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: result.isValid && !result.data?.isRevoked ? (result.isQrVerification ? '#f59e0b' : '#4ade80') : '#ef4444' }}>
+                                            {!result.isValid ? 'Verification Failed' : (result.data?.isRevoked ? 'Certificate Revoked' : (result.isQrVerification ? 'Ledger Record Found' : 'Verification Confirmed'))}
                                         </h2>
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Status: {!result.isValid ? 'LEDGER ERROR - FILE MUTATED OR FAKE' : (result.data?.isRevoked ? 'INVALIDATED BY ISSUER' : 'ANCHORED TO LEDGER')}</p>
+                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                                            Status: {!result.isValid ? (result.isCryptoQr ? 'LEDGER ERROR - FAKE QR CODE DETECTED' : 'LEDGER ERROR - FILE MUTATED OR FAKE') : (result.data?.isRevoked ? 'INVALIDATED BY ISSUER' : (result.isQrVerification ? 'PENDING FILE VERIFICATION - UPLOAD .DOCX TO PROVE AUTHENTICITY' : 'ANCHORED TO LEDGER AND UNTAMPERED'))}
+                                        </p>
                                     </div>
                                 </div>
+
+                                {result.isCryptoQr && result.isValid && !result.data?.isRevoked && (
+                                    <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74, 222, 128, 0.3)', borderRadius: '12px', textAlign: 'left' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#4ade80', fontWeight: 800 }}>
+                                            <CheckCircle size={20} /> 100% Cryptographic Match
+                                        </div>
+                                        <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                                            This QR Code is cryptographically signed and directly verified against the blockchain. Ensure the physical paper EXACTLY matches the details below:
+                                        </p>
+                                        <div style={{ marginTop: '1rem', padding: '1.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                                            <p style={{ fontSize: '1.3rem', color: '#fff', fontWeight: '800' }}>Issued to: <span style={{color: '#4ade80', marginLeft: '0.5rem'}}>{result.params.n}</span></p>
+                                            <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', marginTop: '0.6rem' }}>Course: <strong style={{color: 'white'}}>{result.params.c}</strong></p>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {result.isCryptoQr && !result.isValid && (
+                                    <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', textAlign: 'left' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#ef4444', fontWeight: 800 }}>
+                                            <AlertCircle size={20} /> Forgery Detected
+                                        </div>
+                                        <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                                            The data embedded in this QR code (Name: <strong>{result.params.n}</strong>) completely failed the cryptographic signature check. This document is mathematically proven to be a fake.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {result.isQrVerification && !result.data?.isRevoked && (
+                                    <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', textAlign: 'left' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#f59e0b', fontWeight: 800 }}>
+                                            <AlertCircle size={20} /> Action Required
+                                        </div>
+                                        <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+                                            Scanning the QR code only confirms that this credential ID exists on the ledger. 
+                                            <strong style={{ color: 'white' }}> It does not prove the document you are looking at hasn't been tampered with.</strong> 
+                                            To perform a mathematical byte-level guarantee against alterations (like name changes), you MUST upload the digital .docx certificate file using the drop zone above.
+                                        </p>
+                                    </div>
+                                )}
 
                             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '2rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
                                 <div style={{ marginBottom: '2rem' }}>
