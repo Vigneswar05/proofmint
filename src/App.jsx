@@ -425,51 +425,77 @@ const GenerateCert = () => {
     const templateDataUrl = localStorage.getItem('cert_template_docx') || fallbackTemplate;
     const pdfRenderRef = useRef(null);
 
-    const generatePDF = async (docxBlob) => {
-        if (!pdfRenderRef.current) {
-            console.error("PDF Render Container not found!");
-            return null;
-        }
-        
+    const generatePDF = async (studentName, course, duration, date, credentialId, qrDataUrl) => {
         try {
-            console.log("Starting PDF generation sequence...");
-            // Clear previous render
-            pdfRenderRef.current.innerHTML = '';
-            
-            // Render Docx to HTML - docx-preview is async
-            await renderAsync(docxBlob, pdfRenderRef.current, null, {
-                className: "docx",
-                inWrapper: false,
-                ignoreLastRenderedPageBreak: true
-            });
-
-            // Increased delay to ensure complexity is rendered (font, images, qr)
-            await new Promise(r => setTimeout(r, 800));
-
-            const canvas = await html2canvas(pdfRenderRef.current, {
-                scale: 2, // High resolution
-                useCORS: true,
-                logging: false,
-                backgroundColor: "#ffffff",
-                windowWidth: 794, // Standard A4 pixel width at 96dpi
-                windowHeight: 1123
-            });
-
-            const imgData = canvas.toDataURL('image/png');
+            console.log("Generating high-fidelity digital PDF...");
+            // Standard A4: 210 x 297 mm
             const pdf = new jsPDF({
-                orientation: 'p',
+                orientation: 'l', // Landscape often looks better for certificates
                 unit: 'mm',
                 format: 'a4'
             });
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const width = pdf.internal.pageSize.getWidth();
+            const height = pdf.internal.pageSize.getHeight();
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            console.log("PDF packaged successfully.");
+            // Background / Border
+            pdf.setDrawColor(200, 200, 200);
+            pdf.setLineWidth(1);
+            pdf.rect(5, 5, width - 10, height - 10);
+            pdf.rect(7, 7, width - 14, height - 14);
+
+            // Watermark or subtle patterns could be added here
+            
+            // Header
+            pdf.setTextColor(40, 40, 40);
+            pdf.setFontSize(32);
+            pdf.setFont("helvetica", "bold");
+            pdf.text("CERTIFICATE OF COMPLETION", width / 2, 45, { align: "center" });
+
+            pdf.setFontSize(14);
+            pdf.setFont("helvetica", "normal");
+            pdf.text("This globally verified credential is awarded to", width / 2, 65, { align: "center" });
+
+            // Student Name
+            pdf.setTextColor(6, 182, 212); // ProofMint Primary Color
+            pdf.setFontSize(38);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(studentName.toUpperCase(), width / 2, 85, { align: "center" });
+
+            // Course Info
+            pdf.setTextColor(60, 60, 60);
+            pdf.setFontSize(16);
+            pdf.setFont("helvetica", "normal");
+            pdf.text(`for successfully completing the program in`, width / 2, 105, { align: "center" });
+            
+            pdf.setFontSize(22);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(course, width / 2, 120, { align: "center" });
+
+            // Duration and Date
+            pdf.setFontSize(12);
+            pdf.setFont("helvetica", "normal");
+            pdf.text(`${duration} | Issued on ${date}`, width / 2, 135, { align: "center" });
+
+            // Institution Authority
+            pdf.setFontSize(14);
+            pdf.text(`Authorized by ${currentUser.name || 'Credential Authority'}`, width / 2, 160, { align: "center" });
+
+            // QR Code & Verification
+            if (qrDataUrl) {
+                // Add QR code image
+                pdf.addImage(qrDataUrl, 'PNG', width / 2 - 20, 175, 40, 40);
+            }
+
+            pdf.setFontSize(8);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text("VERIFY THIS CERTIFICATE AT PROOFMINT.IN", width / 2, 225, { align: "center" });
+            pdf.text(`Credential ID: ${credentialId}`, width / 2, 230, { align: "center" });
+
+            console.log("PDF generation success.");
             return pdf.output('blob');
         } catch (err) {
-            console.error("CRITICAL: PDF Generation Failed:", err);
+            console.error("Manual PDF Error:", err);
             return null;
         }
     };
@@ -530,7 +556,7 @@ const GenerateCert = () => {
                 exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.docx`, outBuffer);
                 
                 // ADD PDF TO ZIP!
-                const pdfBlob = await generatePDF(docxBlob);
+                const pdfBlob = await generatePDF(n, c, dur, dt, credentialId, qrDataUrl);
                 if (pdfBlob) {
                     const pdfBuffer = await pdfBlob.arrayBuffer();
                     exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.pdf`, pdfBuffer);
@@ -618,11 +644,11 @@ const GenerateCert = () => {
 
             const docxUrl = URL.createObjectURL(docxBlob);
             
-            // Build PDF as well!
-            const pdfBlob = await generatePDF(docxBlob);
+            // Build PDF as well using direct draw for 100% reliability
+            const pdfBlob = await generatePDF(form.name, form.course, form.duration, dt, credentialId, qrDataUrl);
             const pdfUrl = pdfBlob ? URL.createObjectURL(pdfBlob) : null;
 
-            setSuccess({ tx, docxUrl, pdfUrl, hash: dataHash, studentName: n });
+            setSuccess({ tx, docxUrl, pdfUrl, hash: dataHash, studentName: form.name });
             setForm({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {
             console.error(err);
