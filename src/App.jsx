@@ -25,7 +25,6 @@ import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
 import ImageModule from 'docxtemplater-image-module-free';
-import jsPDF from 'jspdf';
 import { BlockchainProvider, useBlockchain } from './BlockchainContext';
 import { defaultTemplate } from './defaultTemplate.js';
 
@@ -422,81 +421,6 @@ const GenerateCert = () => {
     const fallbackTemplate = currentUser?.name?.toLowerCase().includes('abc') ? defaultTemplate : null;
     const templateDataUrl = localStorage.getItem('cert_template_docx') || fallbackTemplate;
 
-    const generatePDF = async (studentName, course, duration, date, credentialId, qrDataUrl) => {
-        try {
-            console.log("Generating high-fidelity digital PDF...");
-            // Standard A4: 210 x 297 mm
-            const pdf = new jsPDF({
-                orientation: 'l', // Landscape often looks better for certificates
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            const width = pdf.internal.pageSize.getWidth();
-            const height = pdf.internal.pageSize.getHeight();
-
-            // Background / Border
-            pdf.setDrawColor(200, 200, 200);
-            pdf.setLineWidth(1);
-            pdf.rect(5, 5, width - 10, height - 10);
-            pdf.rect(7, 7, width - 14, height - 14);
-
-            // Watermark or subtle patterns could be added here
-            
-            // Header
-            pdf.setTextColor(40, 40, 40);
-            pdf.setFontSize(32);
-            pdf.setFont("helvetica", "bold");
-            pdf.text("CERTIFICATE OF COMPLETION", width / 2, 45, { align: "center" });
-
-            pdf.setFontSize(14);
-            pdf.setFont("helvetica", "normal");
-            pdf.text("This globally verified credential is awarded to", width / 2, 65, { align: "center" });
-
-            // Student Name
-            pdf.setTextColor(6, 182, 212); // ProofMint Primary Color
-            pdf.setFontSize(38);
-            pdf.setFont("helvetica", "bold");
-            pdf.text(studentName.toUpperCase(), width / 2, 85, { align: "center" });
-
-            // Course Info
-            pdf.setTextColor(60, 60, 60);
-            pdf.setFontSize(16);
-            pdf.setFont("helvetica", "normal");
-            pdf.text(`for successfully completing the program in`, width / 2, 105, { align: "center" });
-            
-            pdf.setFontSize(22);
-            pdf.setFont("helvetica", "bold");
-            pdf.text(course, width / 2, 120, { align: "center" });
-
-            // Duration and Date
-            pdf.setFontSize(12);
-            pdf.setFont("helvetica", "normal");
-            pdf.text(`${duration} | Issued on ${date}`, width / 2, 135, { align: "center" });
-
-            // Institution Authority
-            pdf.setFontSize(14);
-            pdf.text(`Authorized by ${currentUser.name || 'Credential Authority'}`, width / 2, 160, { align: "center" });
-
-            // QR Code & Verification
-            if (qrDataUrl) {
-                // Add QR code image
-                pdf.addImage(qrDataUrl, 'PNG', width / 2 - 20, 175, 40, 40);
-            }
-
-            pdf.setFontSize(8);
-            pdf.setTextColor(150, 150, 150);
-            pdf.text("VERIFY THIS CERTIFICATE AT PROOFMINT.IN", width / 2, 225, { align: "center" });
-            pdf.text(`Credential ID: ${credentialId}`, width / 2, 230, { align: "center" });
-
-            console.log("PDF generation success.");
-            return pdf.output('blob');
-        } catch (err) {
-            console.error("Manual PDF Error:", err);
-            return null;
-        }
-    };
-
     const handleBatchGenerate = async () => {
         if (!templateDataUrl) return alert('Please upload a .docx template first.');
         if (!csvFile) return alert('Please upload a CSV file.');
@@ -552,13 +476,6 @@ const GenerateCert = () => {
                 // Add Word to zip
                 exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.docx`, outBuffer);
                 
-                // ADD PDF TO ZIP!
-                const pdfBlob = await generatePDF(n, c, dur, dt, credentialId, qrDataUrl);
-                if (pdfBlob) {
-                    const pdfBuffer = await pdfBlob.arrayBuffer();
-                    exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.pdf`, pdfBuffer);
-                }
-
                 const fileHash = await generateBlobHash(docxBlob);
                 // We use dataHash on blockchain for 100% automatic QR verification
                 await storeHashOnBlockchain(dataHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
@@ -568,7 +485,7 @@ const GenerateCert = () => {
             const finalZipBlob = new Blob([finalZipBuffer], { type: 'application/zip' });
             saveAs(finalZipBlob, 'ProofMint_Bulk_Certificates.zip');
             
-            alert(`Success! ${rows.length} certificates securely minted into the blockchain. ZIP contains both Word and PDF versions.`);
+            alert(`Success! ${rows.length} certificates securely minted into the blockchain.`);
             setCsvFile(null);
         } catch (err) {
             console.error(err);
@@ -640,12 +557,7 @@ const GenerateCert = () => {
             });
 
             const docxUrl = URL.createObjectURL(docxBlob);
-            
-            // Build PDF as well using direct draw for 100% reliability
-            const pdfBlob = await generatePDF(form.name, form.course, form.duration, dt, credentialId, qrDataUrl);
-            const pdfUrl = pdfBlob ? URL.createObjectURL(pdfBlob) : null;
-
-            setSuccess({ tx, docxUrl, pdfUrl, hash: dataHash, studentName: form.name });
+            setSuccess({ tx, docxUrl, hash: dataHash, studentName: form.name });
             setForm({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {
             console.error(err);
@@ -757,19 +669,10 @@ const GenerateCert = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                {success.pdfUrl ? (
-                                    <a href={success.pdfUrl} download={`${success.studentName || 'certificate'}.pdf`} className="btn-primary" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', borderRadius: '12px', color: 'white' }}>
-                                        <FileText size={20} /> Download PDF
-                                    </a>
-                                ) : (
-                                    <div className="glass-card" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.6 }}>
-                                        <Loader2 className="animate-spin" size={20} /> Generating PDF...
-                                    </div>
-                                )}
-                                <a href={success.docxUrl} download={`${success.studentName || 'certificate'}.docx`} className="glass-card" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'white' }}>
-                                    <Download size={20} /> Word (.docx)
+                                <a href={success.docxUrl} download={`${success.studentName || 'certificate'}.docx`} className="btn-primary" style={{ flex: 1, minWidth: '180px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', color: 'white', borderRadius: '12px', border: 'none', fontWeight: 700, textDecoration: 'none' }}>
+                                    <Download size={20} /> Download Word (.docx)
                                 </a>
-                                <button onClick={() => setSuccess(null)} className="glass-card" style={{ padding: '0 2rem', color: 'white' }}>Close</button>
+                                <button onClick={() => setSuccess(null)} className="glass-card" style={{ padding: '0 2rem', height: '56px', color: 'white', border: '1px solid var(--border)', borderRadius: '12px' }}>Close</button>
                             </div>
                         </motion.div>
                     </motion.div>
