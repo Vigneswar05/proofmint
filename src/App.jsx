@@ -25,9 +25,7 @@ import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
 import ImageModule from 'docxtemplater-image-module-free';
-import { renderAsync } from 'docx-preview';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { BlockchainProvider, useBlockchain } from './BlockchainContext';
 import { defaultTemplate } from './defaultTemplate.js';
 
@@ -423,7 +421,6 @@ const GenerateCert = () => {
     const [success, setSuccess] = useState(null);
     const fallbackTemplate = currentUser?.name?.toLowerCase().includes('abc') ? defaultTemplate : null;
     const templateDataUrl = localStorage.getItem('cert_template_docx') || fallbackTemplate;
-    const pdfRenderRef = useRef(null);
 
     const generatePDF = async (studentName, course, duration, date, credentialId, qrDataUrl) => {
         try {
@@ -779,10 +776,6 @@ const GenerateCert = () => {
                 )}
             </AnimatePresence>
             
-            {/* Hidden container for PDF rendering - improved for capture */}
-            <div style={{ position: 'absolute', left: 0, top: 0, width: '794px', background: 'white', opacity: 0, pointerEvents: 'none', zIndex: -1000, overflow: 'hidden' }}>
-                <div ref={pdfRenderRef} style={{ background: 'white', width: '100%' }}></div>
-            </div>
         </div>
     );
 };
