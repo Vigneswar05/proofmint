@@ -202,17 +202,21 @@ export const BlockchainProvider = ({ children }) => {
 
     const generateBlobHash = async (blob) => {
         const arrayBuffer = await blob.arrayBuffer();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        // Use Web Crypto API if available (HTTPS)
+        if (window.crypto && window.crypto.subtle) {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        } else {
+            // Fallback for HTTP / Mobile network testing securely using the sha256 module
+            const uint8Array = new Uint8Array(arrayBuffer);
+            return sha256(Array.from(uint8Array));
+        }
     };
 
     const generateStringHash = async (str) => {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(str);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        // Safe cross-platform synchronous hash (HTTPS and HTTP mobile tests)
+        return sha256(str);
     };
 
     const generateFileHash = generateBlobHash;
