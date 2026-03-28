@@ -477,8 +477,8 @@ const GenerateCert = () => {
                 exportBundle.file(`${n.replace(/[^a-z0-9]/gi, '_')}/${n.replace(/[^a-z0-9]/gi, '_')}.docx`, outBuffer);
                 
                 const fileHash = await generateBlobHash(docxBlob);
-                // We use dataHash on blockchain for 100% automatic QR verification
-                await storeHashOnBlockchain(dataHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
+                // Binary file hash is now the primary on-chain anchor for 100% verification success on upload
+                await storeHashOnBlockchain(fileHash, { courseName: c, duration: dur, institutionName: currentUser.name, credentialId });
             }
 
             const finalZipBuffer = exportBundle.generate({ type: 'arraybuffer' });
@@ -547,9 +547,10 @@ const GenerateCert = () => {
 
             const fileHash = await generateBlobHash(docxBlob);
 
-            // Removing studentName mapping for Privacy (DPDP Act Compliance)
-            // Using Cryptographic QR dataHash directly binds Name to the Ledger!
-            const tx = await storeHashOnBlockchain(dataHash, {
+            // Anchoring the FILE HASH (binary document hash) to the blockchain!
+            // This ensures when a user uploads the .docx file to skip traditional verification,
+            // the hashes match 100% and it validates on the ledger.
+            const tx = await storeHashOnBlockchain(fileHash, {
                 courseName: form.course,
                 duration: form.duration,
                 institutionName: currentUser.name,
@@ -557,7 +558,7 @@ const GenerateCert = () => {
             });
 
             const docxUrl = URL.createObjectURL(docxBlob);
-            setSuccess({ tx, docxUrl, hash: dataHash, studentName: form.name });
+            setSuccess({ tx, docxUrl, hash: fileHash, studentName: form.name });
             setForm({ name: '', course: '', duration: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {
             console.error(err);
@@ -708,26 +709,31 @@ const VerifyCert = () => {
         try {
             const n = params.get('n') || '';
             const c = params.get('c') || '';
-            const d = params.get('d') || '';
-            const dt = params.get('dt') || '';
-            const i = params.get('i') || '';
-            const s = params.get('s') || '';
-            
-            const dataString = `${n}|${c}|${d}|${dt}|${i}|${s}`;
-            const dataHash = await generateStringHash(dataString);
-            const blockchainData = await verifyHashOnBlockchain(dataHash);
+            const d = params.get('d') || ''; // duration
+            const dt = params.get('dt') || ''; // date
+            const id = params.get('id') || ''; // credentialId
+
+            // Decentralized lookup using the globally unique Credential ID
+            // This returns the fileHash which was anchored during issuance
+            const blockchainData = await verifyCredentialIdOnBlockchain(id);
 
             if (blockchainData) {
                 setResult({
                     isValid: true,
                     isCryptoQr: true,
-                    data: blockchainData,
+                    data: blockchainData.data,
                     params: { n, c, d, dt },
-                    hash: dataHash,
-                    fileName: "Cryptographic QR Code Validation"
+                    hash: blockchainData.hash,
+                    fileName: "Blockchain Secured Credential"
                 });
             } else {
-                setResult({ isValid: false, isCryptoQr: true, params: { n, c }, hash: dataHash, fileName: "Cryptographic QR Code Validation" });
+                setResult({ 
+                    isValid: false, 
+                    isCryptoQr: true, 
+                    params: { n, c }, 
+                    hash: "N/A - ID not found on ledger", 
+                    fileName: "Credential ID Verification Failed" 
+                });
             }
         } catch (e) {
             alert('Verification process interrupted.');
