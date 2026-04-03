@@ -57,9 +57,7 @@ const Navbar = () => {
             gap: '1rem'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-                <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))', padding: '8px', borderRadius: '12px' }}>
-                    <ShieldCheck color="white" size={24} />
-                </div>
+                <img src="/logo.png" alt="ProofMint Logo" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }} />
                 <h2 className="gradient-text" style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px' }}>ProofMint</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
@@ -127,14 +125,7 @@ const Login = () => {
                 style={{ maxWidth: '480px', width: '100%', padding: '3.5rem' }}
             >
                 <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                    <div style={{
-                        width: '80px', height: '80px', margin: '0 auto 1.5rem',
-                        background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                        borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 20px 40px rgba(139, 92, 246, 0.3)'
-                    }}>
-                        <ShieldCheck size={40} color="white" />
-                    </div>
+                    <img src="/logo.png" alt="ProofMint Logo" style={{ width: '80px', height: '80px', margin: '0 auto 1.5rem', borderRadius: '24px', boxShadow: '0 20px 40px rgba(139, 92, 246, 0.3)', objectFit: 'cover' }} />
                     <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Secure Portal</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Enter the decentralized certificate network</p>
                 </div>
