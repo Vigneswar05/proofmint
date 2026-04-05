@@ -27,11 +27,12 @@ export const BlockchainProvider = ({ children }) => {
     // Initialize Web3 Ethers Provider
     useEffect(() => {
         const initWeb3 = async () => {
+            let web3Contract;
             if (window.ethereum) {
                 try {
                     const web3Provider = new ethers.BrowserProvider(window.ethereum);
                     setProvider(web3Provider);
-                    const web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, web3Provider);
+                    web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, web3Provider);
                     setContract(web3Contract);
                 } catch (e) {
                     console.error("MetaMask error", e);
@@ -39,9 +40,9 @@ export const BlockchainProvider = ({ children }) => {
             } else {
                 console.warn("No MetaMask detected. Read-only mode via Public Node.");
                 const publicProvider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-                const publicContract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, publicProvider);
+                web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, publicProvider);
                 setProvider(publicProvider);
-                setContract(publicContract);
+                setContract(web3Contract);
             }
             
             const savedUser = localStorage.getItem('cert_user');
@@ -55,6 +56,50 @@ export const BlockchainProvider = ({ children }) => {
         initWeb3();
     }, []);
 
+    const loadBlockchainData = async () => {
+        if (!contract) return;
+        try {
+            // Load Certificates from Blockchain
+            const filter = contract.filters.CertificateIssued();
+            const events = await contract.queryFilter(filter);
+            const hashesMap = {};
+            for (let event of events) {
+                const isRevokedData = await contract.verifyCertificate(event.args.hash);
+                hashesMap[event.args.hash.substring(2)] = {
+                    courseName: "Blockchain Anchored", 
+                    institutionName: event.args.institution,
+                    credentialId: event.args.credentialId,
+                    timestamp: Number(event.args.timestamp) * 1000,
+                    txHash: event.transactionHash,
+                    isRevoked: isRevokedData.isRevoked
+                };
+            }
+            setBlockchainHashes(hashesMap);
+
+            // Load Institutions and their Credits from Blockchain
+            const instFilter = contract.filters.InstitutionRegistered();
+            const instEvents = await contract.queryFilter(instFilter);
+            const instsMap = {};
+            for (let e of instEvents) {
+                const name = e.args.name;
+                const instData = await contract.registeredInstitutions(name);
+                if (instData.isRegistered) {
+                    instsMap[name] = {
+                        credits: Number(instData.credits),
+                        isRegistered: instData.isRegistered
+                    };
+                }
+            }
+            setBlockchainInstitutions(instsMap);
+        } catch (e) {
+            console.error("Error loading blockchain data:", e);
+        }
+    };
+
+    useEffect(() => {
+        if (contract) loadBlockchainData();
+    }, [contract]);
+
     const login = async (role, name, password) => {
         if (!window.ethereum) {
             alert("MetaMask is required for secure Web3 login.");
@@ -62,13 +107,24 @@ export const BlockchainProvider = ({ children }) => {
         }
         await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-        if (role === 'institution') {
-            const isLocalFallback = (name === 'ABC Institute' && password === '123456');
-            if (!isLocalFallback) {
-                alert('Invalid institution credentials.');
+        if (role === 'admin') {
+            if (name !== 'VKNexora' || password !== 'Vigneswar@05') {
+                alert('Invalid admin credentials.');
                 return null;
             }
-        } else if (role !== 'admin') {
+        } else if (role === 'institution') {
+            if (contract) {
+                const passHash = ethers.sha256(ethers.toUtf8Bytes(password));
+                const isValid = await contract.verifyInstitutionLogin(name, passHash);
+                if (!isValid) {
+                    alert('Invalid institution credentials from blockchain.');
+                    return null;
+                }
+            } else {
+                alert('No Web3 provider found to verify login.');
+                return null;
+            }
+        } else {
             alert('Unknown role.');
             return null;
         }
@@ -87,48 +143,55 @@ export const BlockchainProvider = ({ children }) => {
         setUserRole(null);
     };
 
-    // Keep stub for backwards UI compatibility
-    const registerInstitutionOnBlockchain = async () => { alert("This feature requires Web3 Admin keys."); };
-    const deleteInstitutionOnBlockchain = async () => {};
-    const addCreditsOnBlockchain = async () => {};
+    const registerInstitutionOnBlockchain = async (name, password) => { 
+        if (!contract) return;
+        const signer = await provider.getSigner();
+        const passHash = ethers.sha256(ethers.toUtf8Bytes(password));
+        const tx = await contract.connect(signer).registerInstitutionData(name, passHash);
+        await tx.wait();
+        await loadBlockchainData();
+        alert("Institution successfully deployed to registry.");
+    };
+    
+    const deleteInstitutionOnBlockchain = async (name) => {
+        if (!contract) return;
+        const signer = await provider.getSigner();
+        const tx = await contract.connect(signer).removeInstitution(name);
+        await tx.wait();
+        await loadBlockchainData();
+    };
+
+    const addCreditsOnBlockchain = async (name, amount) => {
+        if (!contract) return;
+        const signer = await provider.getSigner();
+        const tx = await contract.connect(signer).addCredits(name, amount);
+        await tx.wait();
+        await loadBlockchainData();
+    };
 
     // --- TRUE WEB3 STORE HASH ---
     const storeHashOnBlockchain = async (hash, metadata) => {
         if (!window.ethereum) throw new Error("MetaMask is required to mint to blockchain.");
         if (!contract) throw new Error("Contract not initialized.");
 
-        // We need a signer to completely mutate the state
         const signer = await provider.getSigner();
         const contractWithSigner = contract.connect(signer);
 
-        // Deduct local credits for UI feel (real check is in contract)
-        if (metadata.institutionName) {
-            const inst = blockchainInstitutions[metadata.institutionName];
-            if (!inst || (inst.credits || 0) < 1) throw new Error("Insufficient local credits.");
-            setBlockchainInstitutions({...blockchainInstitutions, [metadata.institutionName]: { ...inst, credits: inst.credits - 1 }});
-        }
-
         try {
-            // Convert hash string to bytes32 format '0x...'
             const bytes32Hash = "0x" + hash;
-            
-            // This triggers the MetaMask Popup!
             const tx = await contractWithSigner.issueCertificate(metadata.credentialId, bytes32Hash, metadata.institutionName);
-            
-            // Transaction submitted, now we wait for it to be mined
             const receipt = await tx.wait();
 
-            const publicLedgerData = {
+            await loadBlockchainData();
+
+            return {
                 courseName: metadata.courseName,
                 institutionName: metadata.institutionName,
                 credentialId: metadata.credentialId,
                 timestamp: Date.now(),
-                txHash: receipt.hash, // The actual network transaction hash
+                txHash: receipt.hash,
                 isRevoked: false
             };
-
-            setBlockchainHashes({...blockchainHashes, [hash]: publicLedgerData});
-            return publicLedgerData;
         } catch (error) {
             console.error("Web3 Error:", error);
             throw new Error(error.reason || error.message);
@@ -142,6 +205,7 @@ export const BlockchainProvider = ({ children }) => {
             const contractWithSigner = contract.connect(signer);
             const tx = await contractWithSigner.revokeCertificate("0x" + hash);
             await tx.wait();
+            await loadBlockchainData();
             return true;
         } catch (error) {
             console.error(error);
