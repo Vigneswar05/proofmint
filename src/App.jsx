@@ -46,6 +46,17 @@ const AppContent = () => {
     );
 
     if (!currentUser) {
+        // Render standalone login page
+        if (currentHash === '#login') {
+            return (
+                <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                    <Navbar />
+                    <Login />
+                </div>
+            );
+        }
+
+        // Render main landing page
         return (
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                 <Navbar />
@@ -136,8 +147,6 @@ const AppContent = () => {
                         Secure Login Portal
                     </button>
                 </div>
-
-                {currentHash === '#login' && <Login />}
             </div>
         );
     }
