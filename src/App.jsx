@@ -30,6 +30,14 @@ const AppContent = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
+    // Force redirect to Dashboard (Home Page) immediately when a user logs in
+    useEffect(() => {
+        if (currentUser) {
+            setActiveTab('dashboard');
+        }
+    }, [currentUser?.id]);
+
+
     if (!isReady) return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.5rem' }}>
             <Loader2 className="animate-spin" size={48} color="var(--primary)" />
