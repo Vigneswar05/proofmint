@@ -16,8 +16,8 @@ const Navbar = () => {
             gap: '1rem'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-                <img src="/logo.png" alt="ProofMint Logo" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }} />
-                <h2 className="gradient-text" style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px' }}>ProofMint</h2>
+                <img src="/logo.png" alt="Validoc Logo" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                <h2 className="gradient-text" style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px' }}>Validoc</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 <div style={{ display: 'none', md: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(74, 222, 128, 0.1)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.2)' }} className="ssl-badge">

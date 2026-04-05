@@ -94,7 +94,7 @@ const GenerateCert = () => {
 
             const finalZipBuffer = exportBundle.generate({ type: 'arraybuffer' });
             const finalZipBlob = new Blob([finalZipBuffer], { type: 'application/zip' });
-            saveAs(finalZipBlob, 'ProofMint_Bulk_Certificates.zip');
+            saveAs(finalZipBlob, 'Validoc_Bulk_Certificates.zip');
             
             alert(`Success! ${rows.length} certificates securely minted into the blockchain.`);
             setCsvFile(null);

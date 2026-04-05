@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Upload, PlusCircle, User, Scan, Loader2 } from 'lucide-react';
+import { Layout, Upload, PlusCircle, User, Scan, Loader2, ShieldCheck, Building } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BlockchainProvider, useBlockchain } from './BlockchainContext';
 
@@ -41,21 +41,94 @@ const AppContent = () => {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                 <Navbar />
-                <div style={{ flex: 1, padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                
+                {/* Hero Section */}
+                <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'radial-gradient(circle at 50% -20%, rgba(139, 92, 246, 0.15), transparent 60%)' }}>
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                        style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '1rem' }}
+                    >
+                        Secure, Immutable <span className="gradient-text">Verifications.</span>
+                    </motion.h1>
+                    <motion.p 
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                        style={{ fontSize: '1.2rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 2.5rem' }}
+                    >
+                        Validoc leverages blockchain technology to issue and verify digital certificates instantly, transparently, and securely. No more fraud. No more lost papers.
+                    </motion.p>
+                </div>
+
+                <div style={{ padding: '0 2rem 4rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: '100%', maxWidth: '900px' }}>
                         <VerifyCert isPublic />
-                        <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-                            <p style={{ color: 'var(--text-muted)' }}>Are you an institution or admin?</p>
-                            <button
-                                className="glass-card"
-                                style={{ marginTop: '1rem', padding: '12px 32px', color: 'white' }}
-                                onClick={() => window.location.hash = '#login'}
-                            >
-                                Secure Login Portal
-                            </button>
+                    </div>
+                </div>
+
+                {/* Why Validoc? Section */}
+                <div style={{ padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 800, marginBottom: '3rem' }}>Why Choose Validoc?</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+                            <div className="glass-card" style={{ padding: '2rem' }}>
+                                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.2)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                    <ShieldCheck size={28} />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Tamper-Proof Security</h3>
+                                <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>Every document is cryptographically hashed and anchored to a smart contract, making it mathematically impossible to forge or manipulate.</p>
+                            </div>
+                            <div className="glass-card" style={{ padding: '2rem' }}>
+                                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.2)', color: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                    <Scan size={28} />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Instant Verification</h3>
+                                <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>Employers and universities can verify documents in seconds by uploading the file or scanning a QR code. Zero bureaucracy, zero delays.</p>
+                            </div>
+                            <div className="glass-card" style={{ padding: '2rem' }}>
+                                <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                    <Building size={28} />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>SaaS for Institutions</h3>
+                                <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>Universities get a complete portal to manage credits, upload custom MS Word templates, and issue certificates in bulk.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                {/* How it Works Section */}
+                <div style={{ padding: '4rem 2rem' }}>
+                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                        <h2 style={{ textAlign: 'center', fontSize: '2.5rem', fontWeight: 800, marginBottom: '3rem' }}>How Validoc Works</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', position: 'relative' }}>
+                             <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--border)', marginBottom: '1rem', lineHeight: '1' }}>1</div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Institution Uploads</h3>
+                                <p style={{ color: 'var(--text-muted)' }}>An authorized entity logs into the portal, uploads their official custom .docx template and the student data.</p>
+                             </div>
+                             <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--border)', marginBottom: '1rem', lineHeight: '1' }}>2</div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Smart Contract Minting</h3>
+                                <p style={{ color: 'var(--text-muted)' }}>Validoc fuses the data onto the MS Word document, generates an unbreakable SHA-256 binary hash, and records it on the blockchain.</p>
+                             </div>
+                             <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
+                                <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--border)', marginBottom: '1rem', lineHeight: '1' }}>3</div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>Global Verification</h3>
+                                <p style={{ color: 'var(--text-muted)' }}>Anyone presented with the certificate can upload it here directly or scan its QR code to guarantee its authenticity against the ledger.</p>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>Are you an institution or admin?</p>
+                    <button
+                        className="glass-card"
+                        style={{ marginTop: '1rem', padding: '12px 32px', color: 'white' }}
+                        onClick={() => window.location.hash = '#login'}
+                    >
+                        Secure Login Portal
+                    </button>
+                </div>
+
                 {currentHash === '#login' && <Login />}
             </div>
         );

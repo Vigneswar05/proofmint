@@ -24,7 +24,7 @@ const Login = () => {
                 style={{ maxWidth: '480px', width: '100%', padding: '3.5rem' }}
             >
                 <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                    <img src="/logo.png" alt="ProofMint Logo" style={{ width: '80px', height: '80px', margin: '0 auto 1.5rem', borderRadius: '24px', boxShadow: '0 20px 40px rgba(139, 92, 246, 0.3)', objectFit: 'cover' }} />
+                    <img src="/logo.png" alt="Validoc Logo" style={{ width: '80px', height: '80px', margin: '0 auto 1.5rem', borderRadius: '24px', boxShadow: '0 20px 40px rgba(139, 92, 246, 0.3)', objectFit: 'cover' }} />
                     <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Secure Portal</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Enter the decentralized certificate network</p>
                 </div>
