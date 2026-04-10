@@ -47,8 +47,10 @@ try {
     console.error("Backend Web3 Initialization Error:", error);
 }
 
+const router = express.Router();
+
 // Same API routes, matching what the frontend fetch is configured to request.
-app.post('/api/mint', async (req, res) => {
+router.post('/mint', async (req, res) => {
     try {
         if (!contract) return res.status(500).json({ error: "Blockchain contract not properly configured on backend." });
         const { hash, metadata } = req.body;
@@ -65,7 +67,7 @@ app.post('/api/mint', async (req, res) => {
     }
 });
 
-app.post('/api/revoke', async (req, res) => {
+router.post('/revoke', async (req, res) => {
     try {
         if (!contract) return res.status(500).json({ error: "Blockchain contract not properly configured on backend." });
         const { hash } = req.body;
@@ -82,7 +84,7 @@ app.post('/api/revoke', async (req, res) => {
     }
 });
 
-app.post('/api/register-institution', async (req, res) => {
+router.post('/register-institution', async (req, res) => {
     try {
         if (!contract) return res.status(500).json({ error: "Blockchain contract not properly configured on backend." });
         const { name, password } = req.body;
@@ -99,7 +101,7 @@ app.post('/api/register-institution', async (req, res) => {
     }
 });
 
-app.post('/api/delete-institution', async (req, res) => {
+router.post('/delete-institution', async (req, res) => {
     try {
         if (!contract) return res.status(500).json({ error: "Blockchain contract not properly configured on backend." });
         const { name } = req.body;
@@ -114,7 +116,7 @@ app.post('/api/delete-institution', async (req, res) => {
     }
 });
 
-app.post('/api/add-credits', async (req, res) => {
+router.post('/add-credits', async (req, res) => {
     try {
         if (!contract) return res.status(500).json({ error: "Blockchain contract not properly configured on backend." });
         const { name, amount } = req.body;
@@ -128,6 +130,11 @@ app.post('/api/add-credits', async (req, res) => {
         res.status(500).json({ error: error.reason || error.message });
     }
 });
+
+// We attach the router to multiple incoming paths. 
+// '/api' for local Vite proxy, and '/.netlify/functions/api' for Netlify's cloud.
+app.use('/api', router);
+app.use('/.netlify/functions/api', router);
 
 // Wrap our Express API in serverless-http to deploy on Netlify seamlessly
 export const handler = serverless(app);
