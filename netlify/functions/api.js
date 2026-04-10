@@ -3,6 +3,7 @@ import serverless from 'serverless-http';
 import cors from 'cors';
 import { ethers } from 'ethers';
 import { readFileSync } from 'fs';
+import path from 'path';
 
 const app = express();
 app.use(cors());
@@ -12,19 +13,14 @@ const CONTRACT_ADDRESS = "0x96E872d905D55A885FAbd0B24e3397e264Daed37";
 // Netlify provides environment variables set in their UI dashboard seamlessly
 const RPC_URL = process.env.TESTNET_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 
-// In Netlify serverless, __dirname or import.meta.url paths to bundled included_files need distinct resolution.
-// Because we have included_files = ["artifacts/contracts/CertChain.sol/CertChain.json"], it is bundled at the root.
+// In Netlify serverless, the execution root is the project root because of node_bundler = "esbuild"
+// and the explicit included_files array in netlify.toml.
 let CertChainArtifact;
 try {
-    const certChainPath = new URL('../../artifacts/contracts/CertChain.sol/CertChain.json', import.meta.url).pathname;
+    const certChainPath = path.join(process.cwd(), 'artifacts', 'contracts', 'CertChain.sol', 'CertChain.json');
     CertChainArtifact = JSON.parse(readFileSync(certChainPath, 'utf8'));
 } catch (e) {
-    // Fallback for Netlify deployment environment root paths
-    try {
-        CertChainArtifact = JSON.parse(readFileSync('./artifacts/contracts/CertChain.sol/CertChain.json', 'utf8'));
-    } catch (err) {
-        console.error("Critical: Could not load ABI artifact.", err);
-    }
+    console.error("Critical: Could not load ABI artifact from CWD.", e);
 }
 
 // Initialize Ethers Backend Wallet
