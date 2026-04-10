@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://proofmint.in/sitemap.xml
+
+Sitemap: https://validoc.in/sitemap.xml
