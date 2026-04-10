@@ -257,6 +257,47 @@ const GenerateCert = () => {
             </div>
 
             <AnimatePresence>
+                {loading && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}
+                    >
+                        <motion.div
+                            animate={{ 
+                                scale: [1, 1.15, 1],
+                            }}
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            style={{ marginBottom: '3rem', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                        >
+                            <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                                style={{ position: 'absolute', width: '140px', height: '140px', border: '2px dashed var(--primary)', borderRadius: '50%', opacity: 0.5 }}
+                            />
+                            <motion.div 
+                                animate={{ rotate: -360 }}
+                                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                style={{ position: 'absolute', width: '170px', height: '170px', border: '1px solid var(--secondary)', borderRadius: '50%', opacity: 0.3 }}
+                            />
+                            <div style={{ position: 'absolute', width: '80px', height: '80px', background: 'var(--primary)', borderRadius: '50%', filter: 'blur(30px)', opacity: 0.6 }}></div>
+                            <ShieldCheck size={64} className="gradient-text" style={{ zIndex: 1 }} />
+                        </motion.div>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '1rem', color: 'white', textAlign: 'center' }}>
+                            {isBatch ? 'Deploying Batch to Blockchain...' : 'Minting Document to Ledger...'}
+                        </h2>
+                        <motion.p 
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                            style={{ color: 'var(--secondary)', fontSize: '1rem', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase' }}
+                        >
+                            <Loader2 className="animate-spin" size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '10px', marginBottom: '2px' }} />
+                            Awaiting Network Consensus
+                        </motion.p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
                 {success && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
