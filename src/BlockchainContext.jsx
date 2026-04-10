@@ -144,43 +144,69 @@ export const BlockchainProvider = ({ children }) => {
     };
 
     const registerInstitutionOnBlockchain = async (name, password) => { 
-        if (!contract) return;
-        const signer = await provider.getSigner();
-        const passHash = ethers.sha256(ethers.toUtf8Bytes(password));
-        const tx = await contract.connect(signer).registerInstitutionData(name, passHash);
-        await tx.wait();
-        await loadBlockchainData();
-        alert("Institution successfully deployed to registry.");
+        try {
+            const res = await fetch('/api/register-institution', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, password })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to register institution');
+            }
+            await loadBlockchainData();
+            alert("Institution successfully deployed to registry.");
+        } catch (error) {
+            console.error(error);
+            alert("Error: " + error.message);
+        }
     };
     
     const deleteInstitutionOnBlockchain = async (name) => {
-        if (!contract) return;
-        const signer = await provider.getSigner();
-        const tx = await contract.connect(signer).removeInstitution(name);
-        await tx.wait();
-        await loadBlockchainData();
+        try {
+            const res = await fetch('/api/delete-institution', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            if (!res.ok) throw new Error('Failed to delete institution');
+            await loadBlockchainData();
+        } catch (error) {
+            console.error(error);
+            alert("Error: " + error.message);
+        }
     };
 
     const addCreditsOnBlockchain = async (name, amount) => {
-        if (!contract) return;
-        const signer = await provider.getSigner();
-        const tx = await contract.connect(signer).addCredits(name, amount);
-        await tx.wait();
-        await loadBlockchainData();
+        try {
+            const res = await fetch('/api/add-credits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, amount })
+            });
+            if (!res.ok) throw new Error('Failed to add credits');
+            await loadBlockchainData();
+        } catch (error) {
+            console.error(error);
+            alert("Error: " + error.message);
+        }
     };
 
     // --- TRUE WEB3 STORE HASH ---
     const storeHashOnBlockchain = async (hash, metadata) => {
-        if (!window.ethereum) throw new Error("MetaMask is required to mint to blockchain.");
-        if (!contract) throw new Error("Contract not initialized.");
-
-        const signer = await provider.getSigner();
-        const contractWithSigner = contract.connect(signer);
-
         try {
-            const bytes32Hash = "0x" + hash;
-            const tx = await contractWithSigner.issueCertificate(metadata.credentialId, bytes32Hash, metadata.institutionName);
-            const receipt = await tx.wait();
+            const res = await fetch('/api/mint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hash, metadata })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to mint on backend');
+            }
+
+            const data = await res.json();
 
             await loadBlockchainData();
 
@@ -189,22 +215,23 @@ export const BlockchainProvider = ({ children }) => {
                 institutionName: metadata.institutionName,
                 credentialId: metadata.credentialId,
                 timestamp: Date.now(),
-                txHash: receipt.hash,
+                txHash: data.txHash,
                 isRevoked: false
             };
         } catch (error) {
-            console.error("Web3 Error:", error);
-            throw new Error(error.reason || error.message);
+            console.error("Backend Mint Error:", error);
+            throw new Error(error.message);
         }
     };
 
     const revokeHashOnBlockchain = async (hash) => {
-        if (!window.ethereum || !contract) return false;
         try {
-            const signer = await provider.getSigner();
-            const contractWithSigner = contract.connect(signer);
-            const tx = await contractWithSigner.revokeCertificate("0x" + hash);
-            await tx.wait();
+            const res = await fetch('/api/revoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hash })
+            });
+            if (!res.ok) throw new Error('Revoke failed');
             await loadBlockchainData();
             return true;
         } catch (error) {
