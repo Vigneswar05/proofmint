@@ -27,22 +27,17 @@ export const BlockchainProvider = ({ children }) => {
     // Initialize Web3 Ethers Provider
     useEffect(() => {
         const initWeb3 = async () => {
-            let web3Contract;
-            if (window.ethereum) {
-                try {
-                    const web3Provider = new ethers.BrowserProvider(window.ethereum);
-                    setProvider(web3Provider);
-                    web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, web3Provider);
-                    setContract(web3Contract);
-                } catch (e) {
-                    console.error("MetaMask error", e);
-                }
-            } else {
-                console.warn("No MetaMask detected. Read-only mode via Public Node.");
-                const publicProvider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-                web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, publicProvider);
+            try {
+                // We use an unrestricted high-capacity public RPC node exclusively. 
+                // This prevents issues where MetaMask is locked/disconnected and blocks data loading.
+                const rpcNodeUrl = "https://gateway.tenderly.co/public/sepolia";
+                const publicProvider = new ethers.JsonRpcProvider(rpcNodeUrl);
+                const web3Contract = new ethers.Contract(CONTRACT_ADDRESS, CertChainArtifact.abi, publicProvider);
+                
                 setProvider(publicProvider);
                 setContract(web3Contract);
+            } catch (e) {
+                console.error("Public RPC Connection Error:", e);
             }
             
             const savedUser = localStorage.getItem('cert_user');
