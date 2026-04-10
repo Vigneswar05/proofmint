@@ -145,7 +145,7 @@ export const BlockchainProvider = ({ children }) => {
 
     const registerInstitutionOnBlockchain = async (name, password) => { 
         try {
-            const res = await fetch('/api/register-institution', {
+            const res = await fetch('/.netlify/functions/register-institution', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, password })
@@ -164,7 +164,7 @@ export const BlockchainProvider = ({ children }) => {
     
     const deleteInstitutionOnBlockchain = async (name) => {
         try {
-            const res = await fetch('/api/delete-institution', {
+            const res = await fetch('/.netlify/functions/delete-institution', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
@@ -179,7 +179,7 @@ export const BlockchainProvider = ({ children }) => {
 
     const addCreditsOnBlockchain = async (name, amount) => {
         try {
-            const res = await fetch('/api/add-credits', {
+            const res = await fetch('/.netlify/functions/add-credits', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, amount })
@@ -195,7 +195,7 @@ export const BlockchainProvider = ({ children }) => {
     // --- TRUE WEB3 STORE HASH ---
     const storeHashOnBlockchain = async (hash, metadata) => {
         try {
-            const res = await fetch('/api/mint', {
+            const res = await fetch('/.netlify/functions/mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hash, metadata })
@@ -226,7 +226,7 @@ export const BlockchainProvider = ({ children }) => {
 
     const revokeHashOnBlockchain = async (hash) => {
         try {
-            const res = await fetch('/api/revoke', {
+            const res = await fetch('/.netlify/functions/revoke', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ hash })
