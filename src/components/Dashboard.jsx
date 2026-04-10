@@ -42,7 +42,8 @@ const Dashboard = ({ setActiveTab }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'flex-start',
+                    paddingTop: '8rem'
                 }}>
                     <Loader2 size={64} className="animate-spin" style={{ color: '#ef4444', marginBottom: '1.5rem' }} />
                     <h2 style={{ color: 'white', fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Revoking Document</h2>
