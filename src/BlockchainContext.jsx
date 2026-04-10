@@ -101,12 +101,7 @@ export const BlockchainProvider = ({ children }) => {
     }, [contract]);
 
     const login = async (role, name, password) => {
-        if (!window.ethereum) {
-            alert("MetaMask is required for secure Web3 login.");
-            return null;
-        }
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-
+        // No MetaMask popup necessary. The blockchain can be read via the public RPC node connection automatically.
         if (role === 'admin') {
             if (name !== 'VKNexora' || password !== 'Vigneswar@05') {
                 alert('Invalid admin credentials.');
