@@ -52,6 +52,7 @@ const AppContent = () => {
                 <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
                     <Navbar />
                     <Login />
+                    <Footer />
                 </div>
             );
         }
@@ -147,6 +148,7 @@ const AppContent = () => {
                         Secure Login Portal
                     </button>
                 </div>
+                <Footer />
             </div>
         );
     }
@@ -163,9 +165,9 @@ const AppContent = () => {
     };
 
     return (
-        <div style={{ minHeight: '100vh', paddingBottom: '5rem' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Navbar />
-            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 1rem' }}>
+            <div style={{ maxWidth: '1400px', width: '100%', margin: '0 auto', padding: '0 1rem', paddingBottom: '5rem' }}>
                 <div className="glass-card" style={{
                     marginBottom: '2rem',
                     borderRadius: '16px',
@@ -216,8 +218,16 @@ const AppContent = () => {
             box-shadow: 0 10px 20px rgba(139, 92, 246, 0.2);
         }
       `}</style>
+            <Footer />
         </div>
     );
 };
+
+const Footer = () => (
+    <footer style={{ textAlign: 'center', padding: '2rem', borderTop: '1px solid var(--border)', marginTop: 'auto', background: 'rgba(0,0,0,0.2)', width: '100%' }}>
+         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>&copy; {new Date().getFullYear()} Ilanix Technologies. All rights reserved.</p>
+         <p style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.5rem', color: 'var(--text-muted)' }}>An MSME Registered Enterprise</p>
+    </footer>
+);
 
 export default App;
