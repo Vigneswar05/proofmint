@@ -2,8 +2,6 @@ import express from 'express';
 import serverless from 'serverless-http';
 import cors from 'cors';
 import { ethers } from 'ethers';
-import { readFileSync } from 'fs';
-import path from 'path';
 
 const app = express();
 app.use(cors());
@@ -13,15 +11,8 @@ const CONTRACT_ADDRESS = "0x96E872d905D55A885FAbd0B24e3397e264Daed37";
 // Netlify provides environment variables set in their UI dashboard seamlessly
 const RPC_URL = process.env.TESTNET_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 
-// In Netlify serverless, the execution root is the project root because of node_bundler = "esbuild"
-// and the explicit included_files array in netlify.toml.
-let CertChainArtifact;
-try {
-    const certChainPath = path.join(process.cwd(), 'artifacts', 'contracts', 'CertChain.sol', 'CertChain.json');
-    CertChainArtifact = JSON.parse(readFileSync(certChainPath, 'utf8'));
-} catch (e) {
-    console.error("Critical: Could not load ABI artifact from CWD.", e);
-}
+// No fs.readFileSync or dynamic paths needed anymore, keeping Netlify perfectly stable.
+import { abi } from './abi.js';
 
 // Initialize Ethers Backend Wallet
 let provider;
@@ -34,9 +25,7 @@ try {
         console.warn("WARNING: PRIVATE_KEY not found in .env. Backend blockchain writes will fail.");
     } else {
         wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-        // Fallback ABI just in case filesystem couldn't read
-        const fallbackAbi = CertChainArtifact ? CertChainArtifact.abi : [];
-        contract = new ethers.Contract(CONTRACT_ADDRESS, fallbackAbi, wallet);
+        contract = new ethers.Contract(CONTRACT_ADDRESS, abi, wallet);
         console.log("Netlify Backend Wallet initialized:", wallet.address);
     }
 } catch (error) {
