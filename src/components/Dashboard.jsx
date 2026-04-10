@@ -1,9 +1,10 @@
-import React from 'react';
-import { PlusCircle, FileText, ShieldCheck, Hash, Search, FileCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { PlusCircle, FileText, ShieldCheck, Hash, Search, FileCheck, Loader2 } from 'lucide-react';
 import { useBlockchain } from '../BlockchainContext';
 
 const Dashboard = ({ setActiveTab }) => {
     const { blockchainHashes, blockchainInstitutions, userRole, currentUser, revokeHashOnBlockchain } = useBlockchain();
+    const [revokingHashes, setRevokingHashes] = useState({});
     
     // Sort all certs chronologically, then filter by role
     const allCerts = Object.entries(blockchainHashes)
@@ -16,8 +17,16 @@ const Dashboard = ({ setActiveTab }) => {
 
     const handleRevoke = async (hash) => {
         if (window.confirm('PERMANENT ACTION: Are you absolutely sure you want to flag this document as REVOKED on the blockchain?')) {
-            await revokeHashOnBlockchain(hash);
-            alert('Document successfully flagged as revoked.');
+            setRevokingHashes(prev => ({ ...prev, [hash]: true }));
+            try {
+                await revokeHashOnBlockchain(hash);
+                alert('Document successfully flagged as revoked.');
+            } catch (error) {
+                console.error('Error revoking document:', error);
+                alert('Failed to revoke document.');
+            } finally {
+                setRevokingHashes(prev => ({ ...prev, [hash]: false }));
+            }
         }
     };
 
@@ -107,7 +116,17 @@ const Dashboard = ({ setActiveTab }) => {
                                         </td>
                                         <td className="td-cell">
                                             {!c.isRevoked && (userRole === 'admin' || currentUser.name === c.institutionName) && (
-                                                <button onClick={() => handleRevoke(c.hash)} style={{ padding: '4px 8px', background: 'transparent', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Revoke</button>
+                                                <button 
+                                                    onClick={() => handleRevoke(c.hash)} 
+                                                    disabled={revokingHashes[c.hash]}
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'transparent', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: revokingHashes[c.hash] ? 'not-allowed' : 'pointer', opacity: revokingHashes[c.hash] ? 0.7 : 1 }}
+                                                >
+                                                    {revokingHashes[c.hash] ? (
+                                                        <><Loader2 size={12} className="animate-spin" /> Revoking...</>
+                                                    ) : (
+                                                        'Revoke'
+                                                    )}
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
