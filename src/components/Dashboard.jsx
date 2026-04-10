@@ -32,6 +32,23 @@ const Dashboard = ({ setActiveTab }) => {
 
     return (
         <div className="fade-in">
+            {Object.values(revokingHashes).some(Boolean) && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(15, 23, 42, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <Loader2 size={64} className="animate-spin" style={{ color: '#ef4444', marginBottom: '1.5rem' }} />
+                    <h2 style={{ color: 'white', fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Revoking Document</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Broadcasting revocation to the blockchain ledger...</p>
+                </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                 <div>
                     <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>
